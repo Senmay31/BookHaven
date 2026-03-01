@@ -1,0 +1,22 @@
+node_modules
+
+# Sensitive admin utility scripts
+BookHaven-Backend/testHash.js
+BookHaven-Backend/fixAdmin.js
+BookHaven-Backend/resetAdmin.js
+BookHaven-Backend/importBooks.js
+BookHaven-Backend/importGoogleBooks.js
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Next.js build output
+.next/
+/out/

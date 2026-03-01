@@ -1,6 +1,14 @@
-const { query } = require('../config/database');
-const { uploadToS3, getSignedBookUrl, deleteFromS3 } = require('../config/storage');
-const { cacheGet, cacheSet, cacheInvalidatePattern } = require('../config/redis');
+const { query } = require("../config/database");
+const {
+  uploadToS3,
+  getSignedBookUrl,
+  deleteFromS3,
+} = require("../config/storage");
+const {
+  cacheGet,
+  cacheSet,
+  cacheInvalidatePattern,
+} = require("../config/redis");
 
 // ─── GET ALL BOOKS (with filtering, search, pagination) ───
 exports.getBooks = async (req, res, next) => {
@@ -12,8 +20,8 @@ exports.getBooks = async (req, res, next) => {
       year_from,
       year_to,
       file_type,
-      sort = 'created_at',
-      order = 'DESC',
+      sort = "created_at",
+      order = "DESC",
       page = 1,
       limit = 20,
     } = req.query;
@@ -25,12 +33,14 @@ exports.getBooks = async (req, res, next) => {
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json({ success: true, ...cached, cached: true });
 
-    const conditions = ['b.is_public = true'];
+    const conditions = ["b.is_public = true"];
     const params = [];
     let paramCount = 1;
 
     if (search) {
-      conditions.push(`b.search_vector @@ plainto_tsquery('english', $${paramCount})`);
+      conditions.push(
+        `b.search_vector @@ plainto_tsquery('english', $${paramCount})`,
+      );
       params.push(search);
       paramCount++;
     }
@@ -69,11 +79,19 @@ exports.getBooks = async (req, res, next) => {
       paramCount++;
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const allowedSorts = ['created_at', 'title', 'author', 'avg_rating', 'total_downloads', 'published_year'];
-    const safeSort = allowedSorts.includes(sort) ? sort : 'created_at';
-    const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const allowedSorts = [
+      "created_at",
+      "title",
+      "author",
+      "avg_rating",
+      "total_downloads",
+      "published_year",
+    ];
+    const safeSort = allowedSorts.includes(sort) ? sort : "created_at";
+    const safeOrder = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
     // Boost search-ranked results when searching
     const orderBy = search
@@ -133,7 +151,8 @@ exports.getBook = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT
         b.*,
         u.name AS uploaded_by_name,
@@ -147,10 +166,14 @@ exports.getBook = async (req, res, next) => {
       LEFT JOIN categories c ON bc.category_id = c.id
       WHERE b.id = $1 AND b.is_public = true
       GROUP BY b.id, u.name
-    `, [id]);
+    `,
+      [id],
+    );
 
     if (!result.rows[0]) {
-      return res.status(404).json({ success: false, message: 'Book not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Book not found." });
     }
 
     const book = result.rows[0];
@@ -164,22 +187,68 @@ exports.getBook = async (req, res, next) => {
 };
 
 // ─── GET SIGNED READING URL ───
+// exports.getReadUrl = async (req, res, next) => {
+//   try {
+//     const { id } = req.params;
+
+//     const result = await query(`SELECT file_url, title FROM books WHERE id = $1 AND is_public = true`, [id]);
+//     if (!result.rows[0]) {
+//       return res.status(404).json({ success: false, message: 'Book not found.' });
+//     }
+
+//     // Generate a 1-hour signed URL — like a timed reading pass
+//     const signedUrl = await getSignedBookUrl(result.rows[0].file_url, 3600);
+
+//     // Increment read count
+//     await query(`UPDATE books SET total_reads = total_reads + 1 WHERE id = $1`, [id]);
+
+//     res.json({ success: true, data: { url: signedUrl, expiresIn: 3600 } });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 exports.getReadUrl = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const result = await query(`SELECT file_url, title FROM books WHERE id = $1 AND is_public = true`, [id]);
-    if (!result.rows[0]) {
-      return res.status(404).json({ success: false, message: 'Book not found.' });
+    // Fetch the book
+    const result = await query(
+      `SELECT id, title, file_url, file_type FROM books WHERE id = $1`,
+      [id],
+    );
+
+    const book = result.rows[0];
+
+    if (!book || !book.file_url) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found.",
+      });
     }
 
-    // Generate a 1-hour signed URL — like a timed reading pass
-    const signedUrl = await getSignedBookUrl(result.rows[0].file_url, 3600);
+    // Log the read event
+    await query(
+      `INSERT INTO reading_progress (user_id, book_id, last_read_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id, book_id)
+       DO UPDATE SET last_read_at = NOW()`,
+      [req.user.id, id],
+    );
 
-    // Increment read count
-    await query(`UPDATE books SET total_reads = total_reads + 1 WHERE id = $1`, [id]);
+    await query(
+      `UPDATE books SET total_reads = total_reads + 1 WHERE id = $1`,
+      [id],
+    );
 
-    res.json({ success: true, data: { url: signedUrl, expiresIn: 3600 } });
+    // Return the file_url directly — no signed URL complexity
+    res.json({
+      success: true,
+      data: {
+        readUrl: book.file_url,
+        fileType: book.file_type || "epub",
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -188,39 +257,70 @@ exports.getReadUrl = async (req, res, next) => {
 // ─── UPLOAD BOOK ───
 exports.uploadBook = async (req, res, next) => {
   try {
-    const { title, author, description, isbn, publisher, published_year, language, pages, category_ids, tags } = req.body;
+    const {
+      title,
+      author,
+      description,
+      isbn,
+      publisher,
+      published_year,
+      language,
+      pages,
+      category_ids,
+      tags,
+    } = req.body;
 
     if (!req.files?.book?.[0]) {
-      return res.status(400).json({ success: false, message: 'Book file is required.' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Book file is required." });
     }
 
     const bookFile = req.files.book[0];
     const coverFile = req.files?.cover?.[0];
 
     // Upload book file to S3 (private)
-    const fileKey = await uploadToS3(bookFile.buffer, bookFile.originalname, 'books');
-    const fileType = bookFile.originalname.split('.').pop().toLowerCase();
+    const fileKey = await uploadToS3(
+      bookFile.buffer,
+      bookFile.originalname,
+      "books",
+    );
+    const fileType = bookFile.originalname.split(".").pop().toLowerCase();
 
     // Upload cover image to S3 (public)
     let coverUrl = null;
     if (coverFile) {
-      coverUrl = await uploadToS3(coverFile.buffer, coverFile.originalname, 'covers');
+      coverUrl = await uploadToS3(
+        coverFile.buffer,
+        coverFile.originalname,
+        "covers",
+      );
     }
 
-    const result = await query(`
+    const result = await query(
+      `
       INSERT INTO books (title, author, description, isbn, publisher, published_year, language, pages,
         file_url, file_type, file_size, cover_url, tags, uploaded_by)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING id, title, author, cover_url, file_type, created_at
-    `, [
-      title, author, description, isbn, publisher,
-      published_year ? parseInt(published_year) : null,
-      language || 'English',
-      pages ? parseInt(pages) : null,
-      fileKey, fileType, bookFile.size, coverUrl,
-      tags ? JSON.parse(tags) : [],
-      req.user.id,
-    ]);
+    `,
+      [
+        title,
+        author,
+        description,
+        isbn,
+        publisher,
+        published_year ? parseInt(published_year) : null,
+        language || "English",
+        pages ? parseInt(pages) : null,
+        fileKey,
+        fileType,
+        bookFile.size,
+        coverUrl,
+        tags ? JSON.parse(tags) : [],
+        req.user.id,
+      ],
+    );
 
     const book = result.rows[0];
 
@@ -230,15 +330,21 @@ exports.uploadBook = async (req, res, next) => {
       for (const catId of cats) {
         await query(
           `INSERT INTO book_categories (book_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-          [book.id, catId]
+          [book.id, catId],
         );
       }
     }
 
     // Invalidate book list cache
-    await cacheInvalidatePattern('books:list:*');
+    await cacheInvalidatePattern("books:list:*");
 
-    res.status(201).json({ success: true, message: 'Book uploaded successfully!', data: book });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Book uploaded successfully!",
+        data: book,
+      });
   } catch (error) {
     next(error);
   }
@@ -248,9 +354,21 @@ exports.uploadBook = async (req, res, next) => {
 exports.updateBook = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, author, description, publisher, published_year, language, pages, tags, is_featured, is_public } = req.body;
+    const {
+      title,
+      author,
+      description,
+      publisher,
+      published_year,
+      language,
+      pages,
+      tags,
+      is_featured,
+      is_public,
+    } = req.body;
 
-    const result = await query(`
+    const result = await query(
+      `
       UPDATE books SET
         title = COALESCE($1, title),
         author = COALESCE($2, author),
@@ -264,13 +382,29 @@ exports.updateBook = async (req, res, next) => {
         is_public = COALESCE($10, is_public)
       WHERE id = $11
       RETURNING id, title, author, is_featured, is_public, updated_at
-    `, [title, author, description, publisher, published_year, language, pages, tags, is_featured, is_public, id]);
+    `,
+      [
+        title,
+        author,
+        description,
+        publisher,
+        published_year,
+        language,
+        pages,
+        tags,
+        is_featured,
+        is_public,
+        id,
+      ],
+    );
 
     if (!result.rows[0]) {
-      return res.status(404).json({ success: false, message: 'Book not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Book not found." });
     }
 
-    await cacheInvalidatePattern('books:*');
+    await cacheInvalidatePattern("books:*");
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     next(error);
@@ -282,17 +416,22 @@ exports.deleteBook = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const result = await query(`DELETE FROM books WHERE id = $1 RETURNING file_url, cover_url`, [id]);
+    const result = await query(
+      `DELETE FROM books WHERE id = $1 RETURNING file_url, cover_url`,
+      [id],
+    );
     if (!result.rows[0]) {
-      return res.status(404).json({ success: false, message: 'Book not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Book not found." });
     }
 
     // Delete from S3
     const { file_url, cover_url } = result.rows[0];
     await deleteFromS3(file_url).catch(console.error);
 
-    await cacheInvalidatePattern('books:*');
-    res.json({ success: true, message: 'Book deleted successfully.' });
+    await cacheInvalidatePattern("books:*");
+    res.json({ success: true, message: "Book deleted successfully." });
   } catch (error) {
     next(error);
   }
@@ -301,7 +440,7 @@ exports.deleteBook = async (req, res, next) => {
 // ─── GET FEATURED BOOKS ───
 exports.getFeatured = async (req, res, next) => {
   try {
-    const cacheKey = 'books:featured';
+    const cacheKey = "books:featured";
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json({ success: true, data: cached, cached: true });
 
@@ -321,7 +460,7 @@ exports.getFeatured = async (req, res, next) => {
 // ─── GET CATEGORIES ───
 exports.getCategories = async (req, res, next) => {
   try {
-    const cached = await cacheGet('categories:all');
+    const cached = await cacheGet("categories:all");
     if (cached) return res.json({ success: true, data: cached });
 
     const result = await query(`
@@ -331,7 +470,7 @@ exports.getCategories = async (req, res, next) => {
       GROUP BY c.id ORDER BY c.name
     `);
 
-    await cacheSet('categories:all', result.rows, 900);
+    await cacheSet("categories:all", result.rows, 900);
     res.json({ success: true, data: result.rows });
   } catch (error) {
     next(error);

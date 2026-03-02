@@ -85,7 +85,7 @@ const startServer = async () => {
   app.listen(PORT, () => {
     console.log('');
     console.log('📚 ═══════════════════════════════════════════════');
-    console.log('   Digital Archive API Server');
+    console.log('   BookHaven API Server');
     console.log(`   🚀 Running on http://localhost:${PORT}`);
     console.log(`   🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   📖 API Base: http://localhost:${PORT}/api/v1`);

@@ -1,0 +1,16 @@
+{
+  "name": "bookhaven",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["bookhaven-backend", "bookhaven-frontend"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=bookhaven-backend\" \"npm run dev --workspace=bookhaven-frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

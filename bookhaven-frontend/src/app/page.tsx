@@ -18,10 +18,10 @@ import { BookCard } from "@/components/books/BookCard";
 import Button from "@/components/ui/Button";
 
 const STATS = [
-  { value: "50,000+", label: "Books in Archive", icon: BookOpen },
-  { value: "120+", label: "Languages", icon: Globe },
-  { value: "200+", label: "Categories", icon: Layers },
-  { value: "8,000+", label: "Active Readers", icon: Users },
+  { value: "5,000+", label: "Books in Archive", icon: BookOpen },
+  { value: "100+", label: "Languages", icon: Globe },
+  { value: "50+", label: "Categories", icon: Layers },
+  { value: "1,000+", label: "Active Readers", icon: Users },
 ];
 
 export default function LandingPage() {
@@ -47,7 +47,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-parchment-50">
-      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      {/* ── Navbar ── */}
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-100" : "bg-transparent"}`}
       >
@@ -105,7 +105,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      {/* ── Hero ── */}
       <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-hero-gradient">
         {/* Decorative background elements */}
         <div className="absolute inset-0 opacity-10">
@@ -120,7 +120,7 @@ export default function LandingPage() {
                 transform: `rotate(${((i * 13) % 40) - 20}deg)`,
               }}
             >
-              ✦
+              ✦ <Star className="w-4 h-4" />
             </div>
           ))}
         </div>
@@ -128,7 +128,7 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-6 py-32 text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 text-parchment-300 text-sm font-sans px-4 py-2 rounded-full border border-white/20 mb-8 backdrop-blur-sm animate-fade-in">
             <Library className="w-3.5 h-3.5" />
-            <span>50,000+ books and growing</span>
+            <span>5,000+ books and growing</span>
           </div>
 
           <h1 className="font-display text-5xl md:text-7xl font-bold text-white mb-6 leading-tight animate-slide-up">
@@ -185,7 +185,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Stats ──────────────────────────────────────────────────────────── */}
+      {/* ── Stats ─── */}
       <section className="bg-white border-y border-slate-100 py-10">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -204,7 +204,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Featured Books ─────────────────────────────────────────────────── */}
+      {/* ── Featured Books ── */}
       {featured && featured.length > 0 && (
         <section className="py-16 px-6 max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-8">
@@ -213,7 +213,7 @@ export default function LandingPage() {
                 Featured Works
               </h2>
               <p className="font-sans text-slate-500 mt-1">
-                Handpicked selections from our curators
+                Handpicked selections from our curators...
               </p>
             </div>
             <Link
@@ -231,7 +231,7 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* ── Categories ─────────────────────────────────────────────────────── */}
+      {/* ── Categories ─── */}
       {categories && categories.length > 0 && (
         <section className="py-16 bg-white border-y border-slate-100">
           <div className="max-w-7xl mx-auto px-6">
@@ -275,7 +275,7 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* ── CTA ────────────────────────────────────────────────────────────── */}
+      {/* ── CTA ── */}
       <section className="py-20 px-6 bg-teal-600">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="font-display text-4xl font-bold text-white mb-4">
@@ -307,7 +307,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      {/* ── Footer ── */}
       <footer className="bg-slate-900 text-slate-400 py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">

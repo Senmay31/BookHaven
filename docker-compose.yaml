@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+
+  # ── PostgreSQL Database ──
+  postgres:
+    image: postgres:16-alpine        # Use official PostgreSQL image
+    container_name: bookhaven_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: book_haven_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"                  # host:container
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # persist data between restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis Cache ──
+  redis:
+    image: redis:7-alpine
+    container_name: bookhaven_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (Express API) ──
+  backend:
+    build:
+      context: ./BookHaven-Backend    # folder containing the backend Dockerfile
+      dockerfile: Dockerfile
+    container_name: bookhaven_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # Database — points to the postgres service above, not localhost
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/book_haven_db
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: book_haven_db
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Redis — points to the redis service above
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      # AWS
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      # Google Books
+      GOOGLE_BOOKS_KEY: ${GOOGLE_BOOKS_API_KEY}
+      # CORS
+      CLIENT_URL: http://localhost:3000
+      ALLOWED_ORIGINS: http://localhost:3000
+      # Admin
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy   # wait for postgres to be ready before starting
+      redis:
+        condition: service_healthy
+
+  # ── Database Migration (runs once then exits) ──
+  migrate:
+    build:
+      context: ./BookHaven-Backend
+      dockerfile: Dockerfile
+    container_name: bookhaven_migrate
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/book_haven_db
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: book_haven_db
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    # Run migrate then seed then exit
+    command: sh -c "node src/config/migrate.js && node src/config/seed.js"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"                    # don't restart — run once and done
+
+  # ── Frontend (Next.js) ──
+  frontend:
+    build:
+      context: ./bookhaven-frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
+    container_name: bookhaven_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
+    depends_on:
+      - backend                      # wait for backend before starting frontend
+
+# ── Named Volumes ──
+volumes:
+  postgres_data:
+  redis_data:

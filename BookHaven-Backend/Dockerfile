@@ -1,7 +1,7 @@
 # ── Stage 1: Base image ──
-# Use Node.js 18 on Alpine Linux — Alpine is a tiny Linux distro 
+# Use Node.js 20 on Alpine Linux — Alpine is a tiny Linux distro 
 # that keeps the image size small
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Set the working directory inside the container
 # All subsequent commands run from this folder

@@ -19,6 +19,9 @@ RUN npm install --production
 # Copy everything else (src folder, config files etc.)
 COPY . .
 
+RUN echo "=== Contents of /app ===" && ls -la /app
+RUN echo "=== Contents of /app/src ===" && ls -la /app/src
+
 # ── Stage 4: Configure ──
 # Tell the container which port your Express server uses
 EXPOSE 5000

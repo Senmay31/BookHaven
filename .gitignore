@@ -3,8 +3,8 @@ node_modules
 # Sensitive admin utility scripts
 BookHaven-Backend/testHash.js
 BookHaven-Backend/fixAdmin.js
-# BookHaven-Backend/importBooks.js
-# BookHaven-Backend/importGoogleBooks.js
+BookHaven-Backend/importBooks.js
+BookHaven-Backend/importGoogleBooks.js
 
 # Environment files
 .env

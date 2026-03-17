@@ -4,7 +4,11 @@ const rateLimit = require("express-rate-limit");
 const authController = require("../controllers/authController");
 const booksController = require("../controllers/booksController");
 const libraryController = require("../controllers/libraryController");
-const { authenticate, authorize } = require("../middleware/auth");
+const {
+  authenticate,
+  optionalAuthenticate,
+  authorize,
+} = require("../middleware/auth");
 const { validate } = require("../middleware/errorHandler");
 const { upload } = require("../config/storage");
 
@@ -65,7 +69,7 @@ router.get("/books", booksController.getBooks);
 router.get("/books/featured", booksController.getFeatured);
 router.get("/books/categories", booksController.getCategories);
 router.get("/books/:id", booksController.getBook);
-router.get("/books/:id/read-url", authenticate, booksController.getReadUrl);
+router.get("/books/:id/read-url", booksController.getReadUrl);
 
 router.post(
   "/books",

@@ -3,6 +3,7 @@ import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, LayoutGrid, List, Filter, X, ChevronDown } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { PublicLayout } from "@/components/layout/DashboardLayout";
 import { BookCard, BookCardSkeleton } from "@/components/books/BookCard";
 import { useBooks, useCategories } from "@/hooks/useLibrary";
 import Button from "@/components/ui/Button";
@@ -81,7 +82,7 @@ function BrowseContent() {
   ].filter(Boolean).length;
 
   return (
-    <DashboardLayout>
+    <PublicLayout>
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold text-slate-900">
           Browse Archive
@@ -389,7 +390,7 @@ function BrowseContent() {
           )}
         </>
       )}
-    </DashboardLayout>
+    </PublicLayout>
   );
 }
 

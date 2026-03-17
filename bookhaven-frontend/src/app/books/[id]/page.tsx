@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import PublicLayout from "@/components/layout/DashboardLayout";
 import {
   useBook,
   useReadUrl,
@@ -122,7 +123,7 @@ export default function BookDetailPage() {
   }
 
   return (
-    <DashboardLayout>
+    <PublicLayout>
       <button
         onClick={() => router.back()}
         className="flex items-center gap-2 text-sm font-sans text-slate-500 hover:text-slate-800 mb-6 transition-colors"
@@ -157,14 +158,14 @@ export default function BookDetailPage() {
               size="lg"
               onClick={() => {
                 if (!isAuthenticated) {
-                  router.push("/auth/login");
+                  router.push(`/auth/login?redirect=/books/${id}`);
                   return;
                 }
                 setShowReader(true);
               }}
               icon={<BookOpen className="w-4 h-4" />}
             >
-              Read Now
+              {isAuthenticated ? "Read Now" : "Sign In to Read"}
             </Button>
             <Button
               fullWidth
@@ -428,6 +429,6 @@ export default function BookDetailPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </PublicLayout>
   );
 }

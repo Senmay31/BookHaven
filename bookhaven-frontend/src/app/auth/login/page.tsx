@@ -1,20 +1,20 @@
-'use client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, EyeOff, BookOpen, Mail, Lock } from 'lucide-react';
-import { useState } from 'react';
-import toast from 'react-hot-toast';
-import { authApi } from '@/lib/api';
-import { useAuthStore } from '@/store/authStore';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+"use client";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Eye, EyeOff, BookOpen, Mail, Lock } from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { authApi } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 
 const schema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -24,9 +24,15 @@ export default function LoginPage() {
   const { setAuth } = useAuthStore();
   const router = useRouter();
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/dashboard";
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -34,9 +40,12 @@ export default function LoginPage() {
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
       toast.success(`Welcome back, ${user.name}!`);
-      router.replace('/dashboard');
+      // router.replace('/dashboard');
+      router.push(redirect);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed. Please try again.');
+      toast.error(
+        error.response?.data?.message || "Login failed. Please try again.",
+      );
     }
   };
 
@@ -67,7 +76,9 @@ export default function LoginPage() {
             <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center backdrop-blur-sm">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display text-xl font-bold text-white">The Book Haven</span>
+            <span className="font-display text-xl font-bold text-white">
+              The Book Haven
+            </span>
           </Link>
 
           <div>
@@ -81,7 +92,14 @@ export default function LoginPage() {
 
           <div className="flex gap-2">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: i === 1 ? '#c9841e' : 'rgba(255,255,255,0.3)' }} />
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full"
+                style={{
+                  backgroundColor:
+                    i === 1 ? "#c9841e" : "rgba(255,255,255,0.3)",
+                }}
+              />
             ))}
           </div>
         </div>
@@ -95,15 +113,22 @@ export default function LoginPage() {
             <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
               <BookOpen className="w-4 h-4 text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-slate-900">The Book Haven</span>
+            <span className="font-display text-lg font-bold text-slate-900">
+              The Book Haven
+            </span>
           </div>
 
           <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-8">
             <div className="mb-8">
-              <h2 className="font-display text-3xl font-bold text-slate-900">Welcome back</h2>
+              <h2 className="font-display text-3xl font-bold text-slate-900">
+                Welcome back
+              </h2>
               <p className="font-sans text-slate-500 mt-2">
-                Don't have an account?{' '}
-                <Link href="/auth/register" className="text-teal-600 hover:underline font-medium">
+                Don't have an account?{" "}
+                <Link
+                  href="/auth/register"
+                  className="text-teal-600 hover:underline font-medium"
+                >
                   Create one for free
                 </Link>
               </p>
@@ -116,29 +141,45 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 leftIcon={<Mail className="w-4 h-4" />}
                 error={errors.email?.message}
-                {...register('email')}
+                {...register("email")}
               />
 
               <Input
                 label="Password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 leftIcon={<Lock className="w-4 h-4" />}
                 rightIcon={
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="focus:outline-none">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="focus:outline-none"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 }
                 error={errors.password?.message}
-                {...register('password')}
+                {...register("password")}
               />
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-slate-300 text-teal-600 focus:ring-teal-600" />
-                  <span className="text-sm font-sans text-slate-600">Remember me</span>
+                  <input
+                    type="checkbox"
+                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-600"
+                  />
+                  <span className="text-sm font-sans text-slate-600">
+                    Remember me
+                  </span>
                 </label>
-                <Link href="/auth/forgot-password" className="text-sm font-sans text-teal-600 hover:underline">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm font-sans text-teal-600 hover:underline"
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -156,7 +197,8 @@ export default function LoginPage() {
 
             <div className="mt-6 pt-6 border-t border-slate-100 text-center">
               <p className="text-xs font-sans text-slate-400">
-                By signing in, you agree to our Terms of Service and Privacy Policy.
+                By signing in, you agree to our Terms of Service and Privacy
+                Policy.
               </p>
             </div>
           </div>

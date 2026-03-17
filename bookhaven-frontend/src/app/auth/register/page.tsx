@@ -1,31 +1,33 @@
-'use client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, EyeOff, BookOpen, Mail, Lock, User } from 'lucide-react';
-import { useState } from 'react';
-import toast from 'react-hot-toast';
-import { authApi } from '@/lib/api';
-import { useAuthStore } from '@/store/authStore';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+"use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Eye, EyeOff, BookOpen, Mail, Lock, User } from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { authApi } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 
-const schema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email'),
-  password: z
-    .string()
-    .min(8, 'Must be at least 8 characters')
-    .regex(/(?=.*[a-z])/, 'Must include a lowercase letter')
-    .regex(/(?=.*[A-Z])/, 'Must include an uppercase letter')
-    .regex(/(?=.*\d)/, 'Must include a number'),
-  confirmPassword: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+const schema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.email("Please enter a valid email"),
+    password: z
+      .string()
+      .min(8, "Must be at least 8 characters")
+      .regex(/(?=.*[a-z])/, "Must include a lowercase letter")
+      .regex(/(?=.*[A-Z])/, "Must include an uppercase letter")
+      .regex(/(?=.*\d)/, "Must include a number"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type FormData = z.infer<typeof schema>;
 
@@ -34,11 +36,16 @@ export default function RegisterPage() {
   const { setAuth } = useAuthStore();
   const router = useRouter();
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
-  const password = watch('password', '');
+  const password = watch("password", "");
 
   const passwordStrength = () => {
     let score = 0;
@@ -51,18 +58,39 @@ export default function RegisterPage() {
   };
 
   const strength = passwordStrength();
-  const strengthLabels = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
-  const strengthColors = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-green-600'];
+  const strengthLabels = [
+    "",
+    "Very Weak",
+    "Weak",
+    "Fair",
+    "Strong",
+    "Very Strong",
+  ];
+  const strengthColors = [
+    "",
+    "bg-red-500",
+    "bg-orange-400",
+    "bg-yellow-400",
+    "bg-green-400",
+    "bg-green-600",
+  ];
 
   const onSubmit = async (data: FormData) => {
     try {
-      const response = await authApi.register({ name: data.name, email: data.email, password: data.password });
+      const response = await authApi.register({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
-      toast.success(`Welcome to the Archive, ${user.name}!`);
-      router.replace('/dashboard');
+      toast.success(`Welcome to BookHaven, ${user.name}!`);
+      router.replace("/dashboard");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+      toast.error(
+        error.response?.data?.message ||
+          "Registration failed. Please try again.",
+      );
     }
   };
 
@@ -75,7 +103,9 @@ export default function RegisterPage() {
             <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display text-xl font-bold text-white">The Book Haven</span>
+            <span className="font-display text-xl font-bold text-white">
+              The Book Haven
+            </span>
           </Link>
 
           <div>
@@ -83,22 +113,35 @@ export default function RegisterPage() {
               Join the community of knowledge seekers.
             </h2>
             <p className="font-body text-white/60 text-lg mb-8">
-              Create your account in seconds and get instant access to our entire archive.
+              Create your account in seconds and get instant access to our
+              entire archive.
             </p>
             <div className="space-y-3">
               {[
-                'Unlimited access to thousands of books.',
-                'Personal reading shelf & progress tracking.',
-                'Personalized recommendations.',
-                'Read in-browser — no downloads needed.',
+                "Unlimited access to thousands of books.",
+                "Personal reading shelf & progress tracking.",
+                "Personalized recommendations.",
+                "Read in-browser — no downloads needed.",
               ].map((feature) => (
                 <div key={feature} className="flex items-center gap-3">
                   <div className="w-5 h-5 bg-parchment-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   </div>
-                  <span className="font-sans text-white/80 text-sm">{feature}</span>
+                  <span className="font-sans text-white/80 text-sm">
+                    {feature}
+                  </span>
                 </div>
               ))}
             </div>
@@ -117,15 +160,22 @@ export default function RegisterPage() {
             <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
               <BookOpen className="w-4 h-4 text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-slate-900">The Book Haven</span>
+            <span className="font-display text-lg font-bold text-slate-900">
+              The Book Haven
+            </span>
           </div>
 
           <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-8">
             <div className="mb-8">
-              <h2 className="font-display text-3xl font-bold text-slate-900">Create your account</h2>
+              <h2 className="font-display text-3xl font-bold text-slate-900">
+                Create your account
+              </h2>
               <p className="font-sans text-slate-500 mt-2">
-                Already have an account?{' '}
-                <Link href="/auth/login" className="text-teal-600 hover:underline font-medium">
+                Already have an account?{" "}
+                <Link
+                  href="/auth/login"
+                  className="text-teal-600 hover:underline font-medium"
+                >
                   Sign in
                 </Link>
               </p>
@@ -135,34 +185,42 @@ export default function RegisterPage() {
               <Input
                 label="Full name"
                 type="text"
-                placeholder="Jane Austen"
+                placeholder="Chester P. Bello"
                 leftIcon={<User className="w-4 h-4" />}
                 error={errors.name?.message}
-                {...register('name')}
+                {...register("name")}
               />
 
               <Input
                 label="Email address"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="myemail@example.com"
                 leftIcon={<Mail className="w-4 h-4" />}
                 error={errors.email?.message}
-                {...register('email')}
+                {...register("email")}
               />
 
               <div>
                 <Input
                   label="Password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
                   leftIcon={<Lock className="w-4 h-4" />}
                   rightIcon={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="focus:outline-none">
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   }
                   error={errors.password?.message}
-                  {...register('password')}
+                  {...register("password")}
                 />
                 {/* Password strength indicator */}
                 {password.length > 0 && (
@@ -171,11 +229,13 @@ export default function RegisterPage() {
                       {[1, 2, 3, 4, 5].map((i) => (
                         <div
                           key={i}
-                          className={`h-1 flex-1 rounded-full transition-colors duration-200 ${i <= strength ? strengthColors[strength] : 'bg-slate-200'}`}
+                          className={`h-1 flex-1 rounded-full transition-colors duration-200 ${i <= strength ? strengthColors[strength] : "bg-slate-200"}`}
                         />
                       ))}
                     </div>
-                    <p className={`text-xs font-sans mt-1 ${strength >= 4 ? 'text-green-600' : strength >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>
+                    <p
+                      className={`text-xs font-sans mt-1 ${strength >= 4 ? "text-green-600" : strength >= 3 ? "text-yellow-600" : "text-red-500"}`}
+                    >
                       {strengthLabels[strength]}
                     </p>
                   </div>
@@ -184,28 +244,28 @@ export default function RegisterPage() {
 
               <Input
                 label="Confirm password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 placeholder="Repeat your password"
                 leftIcon={<Lock className="w-4 h-4" />}
                 error={errors.confirmPassword?.message}
-                {...register('confirmPassword')}
+                {...register("confirmPassword")}
               />
 
-              <Button
-                type="submit"
-                fullWidth
-                loading={isSubmitting}
-                size="lg"
-              >
+              <Button type="submit" fullWidth loading={isSubmitting} size="lg">
                 Create my account
               </Button>
             </form>
 
             <p className="mt-6 text-xs font-sans text-slate-400 text-center">
-              By creating an account, you agree to our{' '}
-              <Link href="/terms" className="text-teal-600 hover:underline">Terms of Service</Link>
-              {' '}and{' '}
-              <Link href="/privacy" className="text-teal-600 hover:underline">Privacy Policy</Link>.
+              By creating an account, you agree to our{" "}
+              <Link href="/terms" className="text-teal-600 hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-teal-600 hover:underline">
+                Privacy Policy
+              </Link>
+              .
             </p>
           </div>
         </div>

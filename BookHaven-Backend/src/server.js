@@ -14,6 +14,13 @@ const { query } = require("./config/database");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ───PROXY TRUST ───
+// if (process.env.TRUST_PROXY) {
+//   app.set("trust proxy", parseInt(process.env.TRUST_PROXY));
+// }
+
+app.set("trust proxy", true);
+
 // ─── SECURITY MIDDLEWARE ───
 app.use(
   helmet({
@@ -61,13 +68,11 @@ app.get("/health", async (req, res) => {
       environment: process.env.NODE_ENV,
     });
   } catch (error) {
-    res
-      .status(503)
-      .json({
-        status: "unhealthy",
-        message: "Database connection failed.",
-        error: error.message,
-      });
+    res.status(503).json({
+      status: "unhealthy",
+      message: "Database connection failed.",
+      error: error.message,
+    });
   }
 });
 

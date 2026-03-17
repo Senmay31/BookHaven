@@ -2,7 +2,7 @@ require("dotenv").config();
 const axios = require("axios");
 const { query } = require("./src/config/database");
 
-const GOOGLE_BOOKS_KEY = process.env.GOOGLE_BOOKS_API_KEY || "";
+const GOOGLE_BOOKS_KEY = process.env.GOOGLE_BOOKS_KEY || "";
 
 // ─── FETCH METADATA FROM GOOGLE BOOKS ───
 const getGoogleMetadata = async (title, author) => {

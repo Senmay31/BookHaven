@@ -19,7 +19,8 @@ const PORT = process.env.PORT || 5000;
 //   app.set("trust proxy", parseInt(process.env.TRUST_PROXY));
 // }
 
-app.set("trust proxy", true);
+// app.set("trust proxy", true);
+app.set("trust proxy", "loopback, linklocal, uniquelocal");
 
 // ─── SECURITY MIDDLEWARE ───
 app.use(

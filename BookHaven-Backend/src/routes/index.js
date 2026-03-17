@@ -18,6 +18,10 @@ const authLimiter = rateLimit({
     success: false,
     message: "Too many attempts. Please wait 15 minutes.",
   },
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false,
+  },
 });
 
 const apiLimiter = rateLimit({
@@ -26,6 +30,10 @@ const apiLimiter = rateLimit({
   message: {
     success: false,
     message: "Too many requests. Please check again later.",
+  },
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false,
   },
 });
 

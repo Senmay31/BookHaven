@@ -8,6 +8,7 @@ import { Eye, EyeOff, BookOpen, Mail, Lock } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { authApi } from "@/lib/api";
+import { Suspense } from "react";
 import { useAuthStore } from "@/store/authStore";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -205,5 +206,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export function Search() {
+  return (
+    <Suspense>
+      <LoginPage />
+    </Suspense>
   );
 }

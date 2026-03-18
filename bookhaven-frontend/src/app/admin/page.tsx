@@ -406,9 +406,9 @@ export default function AdminPage() {
       {/* New import tab in admin panel */}
       {activeTab === "import" && (
         <div className="bg-white rounded-xl border border-slate-100 shadow-card p-6">
-          <h2 className="font-display text-xl font-bold text-slate-900 mb-5">
+          <h3 className="font-display text-xl font-bold text-slate-900 mb-5">
             Import Books from Google Books
-          </h2>
+          </h3>
 
           <div className="space-y-4 max-w-md">
             <div>
@@ -441,7 +441,7 @@ export default function AdminPage() {
 
             <div>
               <label className="font-sans text-sm font-medium text-slate-700 block mb-1">
-                Number of Books (max 40)
+                Number of Books (max 50)
               </label>
               <input
                 type="number"

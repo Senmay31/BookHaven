@@ -69,7 +69,7 @@ router.get("/books", booksController.getBooks);
 router.get("/books/featured", booksController.getFeatured);
 router.get("/books/categories", booksController.getCategories);
 router.get("/books/:id", booksController.getBook);
-router.get("/books/:id/read-url", booksController.getReadUrl);
+router.get("/books/:id/read-url", authenticate, booksController.getReadUrl);
 
 router.post(
   "/books",
@@ -150,6 +150,12 @@ router.patch(
   authenticate,
   authorize("admin"),
   libraryController.toggleUserStatus,
+);
+router.post(
+  "/admin/import-books",
+  authenticate,
+  authorize("admin"),
+  libraryController.importBooks,
 );
 
 module.exports = router;

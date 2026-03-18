@@ -5,10 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, BookOpen, Mail, Lock } from "lucide-react";
-import { useState } from "react";
 import toast from "react-hot-toast";
 import { authApi } from "@/lib/api";
-import { Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useAuthStore } from "@/store/authStore";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -20,7 +19,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function LoginPage() {
+function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const { setAuth } = useAuthStore();
   const router = useRouter();
@@ -209,10 +208,24 @@ export default function LoginPage() {
   );
 }
 
-export function Search() {
+// export function Search() {
+//   return (
+//     <Suspense>
+//       <LoginPage />
+//     </Suspense>
+//   );
+// }
+
+export default function LoginPage() {
   return (
-    <Suspense>
-      <LoginPage />
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <LoginContent />
     </Suspense>
   );
 }

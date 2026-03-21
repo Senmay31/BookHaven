@@ -62,7 +62,7 @@ export default function AdminPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<
-    "overview" | "import" | "books" | "users"
+    "overview" | "import" | "import-2" | "books" | "users"
   >("overview");
   const [userSearch, setUserSearch] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -143,30 +143,60 @@ export default function AdminPage() {
     { id: "overview", label: "Overview" },
     { id: "books", label: "Upload Book" },
     { id: "import", label: "Import Books" },
+    { id: "import-2", label: "Import-2 Books" },
     { id: "users", label: "Users" },
   ];
 
   // Import Books tab content
+  const [importSource, setImportSource] = useState<
+    "google" | "openlibrary" | "gutenberg"
+  >("google");
   const [importSubject, setImportSubject] = useState("fiction");
-  const [importLimit, setImportLimit] = useState(50);
+  const [importLimit, setImportLimit] = useState(40);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const SOURCE_ENDPOINTS = {
+    google: "/admin/import-books",
+    openlibrary: "/admin/import-books/openlibrary",
+    gutenberg: "/admin/import-books/gutenberg",
+  };
+
+  const SOURCE_LIMITS = {
+    google: 200,
+    openlibrary: 50,
+    gutenberg: 30, // Gutendex returns max 32 per page
+  };
 
   const handleImport = async () => {
     setImporting(true);
     setImportResult(null);
     try {
-      const res = await api.post("/admin/import-books", {
-        subject: importSubject,
+      const endpoint = SOURCE_ENDPOINTS[importSource];
+      const bodyKey = importSource === "gutenberg" ? "topic" : "subject";
+
+      const res = await api.post(endpoint, {
+        [bodyKey]: importSubject,
         limit: importLimit,
       });
       setImportResult(res.data.message);
       toast.success(res.data.message);
     } catch (err: any) {
-      toast.error("Import failed — check your Google Books API key.");
+      toast.error("Import failed. Check your API configuration.");
     } finally {
       setImporting(false);
     }
+    // try {
+    //   const res = await api.post(`/admin/import-books/${importSource}`, {
+    //     subject: importSubject,
+    //     limit: importLimit,
+    //   });
+    //   setImportResult(res.data.message);
+    //   toast.success(res.data.message);
+    // } catch (err: any) {
+    //   toast.error("Import failed — check your Google Books API key.");
+    // } finally {
+    //   setImporting(false);
+    // }
   };
 
   return (
@@ -406,6 +436,143 @@ export default function AdminPage() {
       {/* New import tab in admin panel */}
       {activeTab === "import" && (
         <div className="bg-white rounded-xl border border-slate-100 shadow-card p-6">
+          <h2 className="font-display text-xl font-bold text-slate-900 mb-2">
+            Import Books
+          </h2>
+          <p className="font-sans text-sm text-slate-500 mb-6">
+            Import books from external sources directly into your library.
+          </p>
+
+          <div className="space-y-4 max-w-md">
+            {/* Source selector */}
+            <div>
+              <label className="font-sans text-sm font-medium text-slate-700 block mb-1">
+                Import Source
+              </label>
+              <select
+                value={importSource}
+                onChange={(e) => {
+                  setImportSource(e.target.value as any);
+                  setImportLimit(20); // reset limit when source changes
+                }}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 font-sans text-sm"
+              >
+                <option value="google">
+                  Google Books — Rich metadata; large catalog; requires API key
+                </option>
+                <option value="openlibrary">
+                  Open Library — 20M books; no API key needed
+                </option>
+                <option value="gutenberg">
+                  Project Gutenberg — Free classic EPUB files
+                </option>
+              </select>
+            </div>
+
+            {/* Source description */}
+            <div className="bg-slate-50 rounded-lg p-3 text-xs font-sans text-slate-500">
+              {importSource === "google" &&
+                "📚 Best for modern books with rich descriptions and cover images. Requires Google Books API key."}
+              {importSource === "openlibrary" &&
+                "🌐 No API key required. Great for variety. Cover images and descriptions may vary."}
+              {importSource === "gutenberg" &&
+                "📖 Free classic literature with actual downloadable EPUB files. Best for reading functionality."}
+            </div>
+
+            {/* Subject selector */}
+            <div>
+              <label className="font-sans text-sm font-medium text-slate-700 block mb-1">
+                Subject / Genre
+              </label>
+              <select
+                value={importSubject}
+                onChange={(e) => setImportSubject(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 font-sans text-sm"
+              >
+                {[
+                  "fiction",
+                  "history",
+                  "science",
+                  "philosophy",
+                  "technology",
+                  "biography",
+                  "mathematics",
+                  "economics",
+                  "literature",
+                  "art",
+                ].map((s) => (
+                  <option key={s} value={s}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Limit selector */}
+            <div>
+              <label className="font-sans text-sm font-medium text-slate-700 block mb-1">
+                Number of Books (max {SOURCE_LIMITS[importSource]})
+              </label>
+              <select
+                value={importLimit}
+                onChange={(e) => setImportLimit(parseInt(e.target.value))}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 font-sans text-sm"
+              >
+                {[20, 40, 60, 80, 100]
+                  .filter((n) => n <= SOURCE_LIMITS[importSource])
+                  .map((n) => (
+                    <option key={n} value={n}>
+                      {n} books
+                    </option>
+                  ))}
+                {importSource === "google" && (
+                  <>
+                    <option value={60}>60 books</option>
+                    <option value={80}>80 books</option>
+                    <option value={100}>100 books</option>
+                    <option value={150}>150 books</option>
+                    <option value={200}>200 books</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <Button
+              onClick={handleImport}
+              loading={importing}
+              icon={<Download className="w-4 h-4" />}
+            >
+              {importing
+                ? "Importing..."
+                : `Import from ${
+                    importSource === "google"
+                      ? "Google Books"
+                      : importSource === "openlibrary"
+                        ? "Open Library"
+                        : "Project Gutenberg"
+                  }`}
+            </Button>
+
+            {importLimit > 40 && (
+              <p className="font-sans text-xs text-amber-600">
+                ⏱ Large imports may take up to 60 seconds. Please wait.
+              </p>
+            )}
+
+            {importResult && (
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+                <p className="font-sans text-sm text-teal-700">
+                  {importResult}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Another import tab in admin panel */}
+      {activeTab === "import-2" && (
+        <div className="bg-white rounded-xl border border-slate-100 shadow-card p-6">
           <h3 className="font-display text-xl font-bold text-slate-900 mb-5">
             Import Books from Google Books
           </h3>
@@ -441,14 +608,27 @@ export default function AdminPage() {
 
             <div>
               <label className="font-sans text-sm font-medium text-slate-700 block mb-1">
-                Number of Books (max 50)
+                Number of Books (max 200)
               </label>
+              <select
+                value={importLimit}
+                onChange={(e) => setImportLimit(parseInt(e.target.value))}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 font-sans text-sm"
+              >
+                <option value={20}>20 books</option>
+                <option value={40}>40 books</option>
+                <option value={60}>60 books</option>
+                <option value={80}>80 books</option>
+                <option value={100}>100 books</option>
+                <option value={150}>150 books</option>
+                <option value={200}>200 books</option>
+              </select>
               <input
                 type="number"
                 value={importLimit}
                 onChange={(e) => setImportLimit(parseInt(e.target.value))}
                 min={1}
-                max={40}
+                max={200}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 font-sans text-sm"
               />
             </div>
@@ -458,7 +638,9 @@ export default function AdminPage() {
               loading={importing}
               icon={<Download className="w-4 h-4" />}
             >
-              {importing ? "Importing..." : "Import Books"}
+              {importing
+                ? `Importing ${importSubject} books...`
+                : "Import Books"}
             </Button>
 
             {importResult && (
@@ -467,6 +649,13 @@ export default function AdminPage() {
                   {importResult}
                 </p>
               </div>
+            )}
+
+            {/* Note for large imports */}
+            {importLimit > 40 && (
+              <p className="font-sans text-xs text-slate-400">
+                ⏱ Imports over 40 books may take 30–60 seconds.
+              </p>
             )}
           </div>
         </div>

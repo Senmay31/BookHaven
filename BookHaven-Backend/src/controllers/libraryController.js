@@ -409,11 +409,102 @@ exports.toggleUserStatus = async (req, res, next) => {
   }
 };
 
-exports.importBooks = async (req, res, next) => {
-  try {
-    const { subject = "fiction", limit = 50 } = req.body;
+// exports.importBooks = async (req, res, next) => {
+//   try {
+//     const { subject = "fiction", limit = 50 } = req.body;
 
-    // Only admins can trigger imports
+//     // Only admins can trigger imports
+//     if (req.user.role !== "admin" && req.user.role !== "librarian") {
+//       return res
+//         .status(403)
+//         .json({ success: false, message: "Access denied." });
+//     }
+
+//     const API_KEY = process.env.GOOGLE_BOOKS_KEY || "";
+//     const BASE_URL = "https://www.googleapis.com/books/v1/volumes";
+
+//     const url = new URL(BASE_URL);
+//     url.searchParams.append("q", `subject:${subject}`);
+//     url.searchParams.append("maxResults", Math.min(limit, 40));
+//     url.searchParams.append("printType", "books");
+//     url.searchParams.append("langRestrict", "en");
+//     if (API_KEY) url.searchParams.append("key", API_KEY);
+
+//     const response = await axios.get(url.toString(), { timeout: 20000 });
+//     const items = response.data.items || [];
+
+//     let imported = 0;
+//     let skipped = 0;
+
+//     for (const item of items) {
+//       const info = item.volumeInfo;
+//       if (!info.title || !info.authors || !info.description) {
+//         skipped++;
+//         continue;
+//       }
+
+//       const existing = await query(
+//         `SELECT id FROM books WHERE LOWER(title) = LOWER($1) AND LOWER(author) = LOWER($2)`,
+//         [info.title, info.authors[0]],
+//       );
+
+//       if (existing.rows.length > 0) {
+//         skipped++;
+//         continue;
+//       }
+
+//       const coverUrl =
+//         info.imageLinks?.thumbnail
+//           ?.replace("http://", "https://")
+//           ?.replace("&edge=curl", "") || null;
+
+//       const isbn =
+//         info.industryIdentifiers?.find((i) => i.type === "ISBN_13")
+//           ?.identifier || null;
+
+//       await query(
+//         `INSERT INTO books
+//           (title, author, description, isbn, publisher,
+//            published_year, language, pages, file_url,
+//            file_type, cover_url, is_public, tags)
+//          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+//         [
+//           info.title,
+//           info.authors[0],
+//           info.description,
+//           isbn,
+//           info.publisher || null,
+//           info.publishedDate
+//             ? parseInt(info.publishedDate.substring(0, 4))
+//             : null,
+//           "English",
+//           info.pageCount || null,
+//           item.accessInfo?.webReaderLink ||
+//             `https://books.google.com/books?id=${item.id}`,
+//           "epub",
+//           coverUrl,
+//           true,
+//           info.categories || [],
+//         ],
+//       );
+
+//       imported++;
+//     }
+
+//     res.json({
+//       success: true,
+//       message: `Import complete — ${imported} imported, ${skipped} skipped.`,
+//       data: { imported, skipped },
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+exports.importBooksFromGoogle = async (req, res, next) => {
+  try {
+    const { subject = "fiction", limit = 40 } = req.body;
+
     if (req.user.role !== "admin" && req.user.role !== "librarian") {
       return res
         .status(403)
@@ -422,30 +513,151 @@ exports.importBooks = async (req, res, next) => {
 
     const API_KEY = process.env.GOOGLE_BOOKS_KEY || "";
     const BASE_URL = "https://www.googleapis.com/books/v1/volumes";
-
-    const url = new URL(BASE_URL);
-    url.searchParams.append("q", `subject:${subject}`);
-    url.searchParams.append("maxResults", Math.min(limit, 40));
-    url.searchParams.append("printType", "books");
-    url.searchParams.append("langRestrict", "en");
-    if (API_KEY) url.searchParams.append("key", API_KEY);
-
-    const response = await axios.get(url.toString(), { timeout: 20000 });
-    const items = response.data.items || [];
+    const BATCH_SIZE = 40; // Google's maximum per request
 
     let imported = 0;
     let skipped = 0;
+    let startIndex = 0;
+    const totalNeeded = Math.min(limit, 200); // cap at 200 per import
 
-    for (const item of items) {
-      const info = item.volumeInfo;
-      if (!info.title || !info.authors || !info.description) {
+    while (imported + skipped < totalNeeded) {
+      const remaining = totalNeeded - imported - skipped;
+      const fetchCount = Math.min(BATCH_SIZE, remaining + 10);
+
+      // Build request URL
+      const url = new URL(BASE_URL);
+      url.searchParams.append("q", `subject:${subject}`);
+      url.searchParams.append("startIndex", startIndex);
+      url.searchParams.append("maxResults", fetchCount);
+      url.searchParams.append("printType", "books");
+      url.searchParams.append("langRestrict", "en");
+      url.searchParams.append("orderBy", "relevance");
+      if (API_KEY) url.searchParams.append("key", API_KEY);
+
+      const response = await axios.get(url.toString(), { timeout: 20000 });
+      const items = response.data.items || [];
+
+      if (items.length === 0) break; // no more results
+
+      for (const item of items) {
+        if (imported >= totalNeeded) break;
+
+        const info = item.volumeInfo;
+
+        // Skip books missing essential fields
+        if (!info.title || !info.authors || !info.description) {
+          skipped++;
+          continue;
+        }
+
+        // Skip duplicates
+        const existing = await query(
+          `SELECT id FROM books 
+           WHERE LOWER(title) = LOWER($1) 
+           AND LOWER(author) = LOWER($2)`,
+          [info.title, info.authors[0]],
+        );
+
+        if (existing.rows.length > 0) {
+          skipped++;
+          continue;
+        }
+
+        const coverUrl =
+          info.imageLinks?.thumbnail
+            ?.replace("http://", "https://")
+            ?.replace("&edge=curl", "") || null;
+
+        const isbn =
+          info.industryIdentifiers?.find((i) => i.type === "ISBN_13")
+            ?.identifier || null;
+
+        const publishedYear = info.publishedDate
+          ? parseInt(info.publishedDate.substring(0, 4))
+          : null;
+
+        await query(
+          `INSERT INTO books
+            (title, author, description, isbn, publisher,
+             published_year, language, pages, file_url,
+             file_type, cover_url, is_public, tags)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+          [
+            info.title,
+            info.authors[0],
+            info.description,
+            isbn,
+            info.publisher || null,
+            publishedYear,
+            "English",
+            info.pageCount || null,
+            item.accessInfo?.webReaderLink ||
+              `https://books.google.com/books?id=${item.id}`,
+            "epub",
+            coverUrl,
+            true,
+            info.categories || [subject],
+          ],
+        );
+
+        imported++;
+      }
+
+      startIndex += BATCH_SIZE;
+
+      // Polite delay between batches
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    res.json({
+      success: true,
+      message: `Import complete — ${imported} imported, ${skipped} skipped.`,
+      data: { imported, skipped, subject },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.importFromOpenLibrary = async (req, res, next) => {
+  try {
+    const { subject = "fiction", limit = 20 } = req.body;
+
+    if (req.user.role !== "admin" && req.user.role !== "librarian") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Access denied." });
+    }
+
+    // Open Library subject search — no API key needed
+    const response = await axios.get(
+      `https://openlibrary.org/subjects/${subject}.json?limit=${Math.min(limit, 50)}`,
+      { timeout: 15000 },
+    );
+
+    const works = response.data.works || [];
+    let imported = 0;
+    let skipped = 0;
+
+    for (const work of works) {
+      if (imported >= limit) break;
+
+      const title = work.title;
+      const author = work.authors?.[0]?.name || "Unknown Author";
+      const coverId = work.cover_id;
+      const firstPublishYear = work.first_publish_year || null;
+
+      if (!title || !author) {
         skipped++;
         continue;
       }
 
+      // Check for duplicates
       const existing = await query(
-        `SELECT id FROM books WHERE LOWER(title) = LOWER($1) AND LOWER(author) = LOWER($2)`,
-        [info.title, info.authors[0]],
+        `SELECT id FROM books 
+         WHERE LOWER(title) = LOWER($1) 
+         AND LOWER(author) = LOWER($2)`,
+        [title, author],
       );
 
       if (existing.rows.length > 0) {
@@ -453,48 +665,145 @@ exports.importBooks = async (req, res, next) => {
         continue;
       }
 
-      const coverUrl =
-        info.imageLinks?.thumbnail
-          ?.replace("http://", "https://")
-          ?.replace("&edge=curl", "") || null;
+      // Fetch work details for description
+      let description = null;
+      try {
+        const workRes = await axios.get(
+          `https://openlibrary.org${work.key}.json`,
+          { timeout: 20000 },
+        );
+        const desc = workRes.data.description;
+        description = typeof desc === "string" ? desc : desc?.value || null;
+      } catch {
+        description = `${title} by ${author}.`;
+      }
 
-      const isbn =
-        info.industryIdentifiers?.find((i) => i.type === "ISBN_13")
-          ?.identifier || null;
+      // Build cover URL from Open Library's cover service
+      const coverUrl = coverId
+        ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
+        : null;
+
+      // Open Library read link
+      const fileUrl = `https://openlibrary.org${work.key}`;
 
       await query(
         `INSERT INTO books
-          (title, author, description, isbn, publisher,
-           published_year, language, pages, file_url,
+          (title, author, description, publisher,
+           published_year, language, file_url,
            file_type, cover_url, is_public, tags)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [
-          info.title,
-          info.authors[0],
-          info.description,
-          isbn,
-          info.publisher || null,
-          info.publishedDate
-            ? parseInt(info.publishedDate.substring(0, 4))
-            : null,
+          title,
+          author,
+          description || `${title} by ${author}.`,
+          "Open Library",
+          firstPublishYear,
           "English",
-          info.pageCount || null,
-          item.accessInfo?.webReaderLink ||
-            `https://books.google.com/books?id=${item.id}`,
+          fileUrl,
           "epub",
           coverUrl,
           true,
-          info.categories || [],
+          [subject],
         ],
       );
 
       imported++;
+
+      // Small delay to be respectful to Open Library's servers
+      await new Promise((r) => setTimeout(r, 300));
     }
 
     res.json({
       success: true,
-      message: `Import complete — ${imported} imported, ${skipped} skipped.`,
-      data: { imported, skipped },
+      message: `Open Library import complete — ${imported} imported, ${skipped} skipped.`,
+      data: { imported, skipped, subject },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.importFromGutenberg = async (req, res, next) => {
+  try {
+    const { topic = "fiction", limit = 20 } = req.body;
+
+    if (req.user.role !== "admin" && req.user.role !== "librarian") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Access denied." });
+    }
+
+    const response = await axios.get(
+      `https://gutendex.com/books/?topic=${topic}&languages=en&mime_type=application%2Fepub%2Bzip`,
+      { timeout: 20000 },
+    );
+
+    const books = response.data.results?.slice(0, limit) || [];
+    let imported = 0;
+    let skipped = 0;
+
+    for (const book of books) {
+      const title = book.title;
+
+      // Convert "Last, First" author format to "First Last"
+      const rawAuthor = book.authors?.[0]?.name || "Unknown";
+      const author = rawAuthor.includes(",")
+        ? rawAuthor
+            .split(",")
+            .map((p) => p.trim())
+            .reverse()
+            .join(" ")
+        : rawAuthor;
+
+      const epubUrl = book.formats?.["application/epub+zip"] || null;
+      const coverUrl = book.formats?.["image/jpeg"] || null;
+
+      if (!epubUrl) {
+        skipped++;
+        continue;
+      }
+
+      // Check for duplicates
+      const existing = await query(
+        `SELECT id FROM books 
+         WHERE LOWER(title) = LOWER($1) 
+         AND LOWER(author) = LOWER($2)`,
+        [title, author],
+      );
+
+      if (existing.rows.length > 0) {
+        skipped++;
+        continue;
+      }
+
+      await query(
+        `INSERT INTO books
+          (title, author, description, publisher,
+           language, file_url, file_type,
+           cover_url, is_public, tags)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [
+          title,
+          author,
+          `${title} is a classic work by ${author}, available for free from Project Gutenberg.`,
+          "Project Gutenberg",
+          "English",
+          epubUrl, // actual EPUB file URL — users can download and read
+          "epub",
+          coverUrl,
+          true,
+          [topic],
+        ],
+      );
+
+      imported++;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    res.json({
+      success: true,
+      message: `Gutenberg import complete — ${imported} imported, ${skipped} skipped.`,
+      data: { imported, skipped, topic },
     });
   } catch (error) {
     next(error);

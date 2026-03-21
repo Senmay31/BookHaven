@@ -155,7 +155,17 @@ router.post(
   "/admin/import-books",
   authenticate,
   authorize("admin"),
-  libraryController.importBooks,
+  libraryController.importBooksFromGoogle,
+);
+router.post(
+  "/admin/import-books/openlibrary",
+  authenticate,
+  libraryController.importFromOpenLibrary,
+);
+router.post(
+  "/admin/import-books/gutenberg",
+  authenticate,
+  libraryController.importFromGutenberg,
 );
 
 module.exports = router;

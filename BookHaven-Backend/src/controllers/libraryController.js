@@ -1,4 +1,5 @@
 const { query } = require("../config/database");
+const axios = require("axios");
 const { cacheInvalidatePattern } = require("../config/redis");
 
 // SHELF CONTROLLER
@@ -411,7 +412,6 @@ exports.toggleUserStatus = async (req, res, next) => {
 exports.importBooks = async (req, res, next) => {
   try {
     const { subject = "fiction", limit = 50 } = req.body;
-    const axios = require("axios");
 
     // Only admins can trigger imports
     if (req.user.role !== "admin" && req.user.role !== "librarian") {

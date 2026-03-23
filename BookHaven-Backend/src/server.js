@@ -11,6 +11,9 @@ const { errorHandler, notFound } = require("./middleware/errorHandler");
 const { connectRedis } = require("./config/redis");
 const { query } = require("./config/database");
 
+const session = require("express-session");
+const passport = require("./config/passport");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -57,6 +60,23 @@ if (process.env.NODE_ENV === "development") {
 } else {
   app.use(morgan("combined"));
 }
+
+// ─── Session middleware — required by passport even when using JWT ───
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60000, // 1 minute — just long enough for OAuth redirect
+    },
+  }),
+);
+
+// ─── Initialize passport ───
+app.use(passport.initialize());
+app.use(passport.session());
 
 // ─── HEALTH CHECK ───
 app.get("/health", async (req, res) => {

@@ -98,6 +98,16 @@ export const authApi = {
   getMe: () => api.get("/auth/me"),
   updateProfile: (data: { name?: string; avatar_url?: string }) =>
     api.patch("/auth/profile", data),
+  // Used by OAuth callback to fetch user profile with a fresh token
+  getProfile: (token?: string) =>
+    api.get("/auth/me", {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    }),
+
+  // Google OAuth — just redirect the browser to this URL
+  googleLogin: () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "")}/api/v1/auth/google`;
+  },
 };
 
 export const booksApi = {

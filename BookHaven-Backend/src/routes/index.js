@@ -11,6 +11,8 @@ const {
 } = require("../middleware/auth");
 const { validate } = require("../middleware/errorHandler");
 const { upload } = require("../config/storage");
+const passport = require("../config/passport");
+const { generateTokenPair } = require("../utils/jwt");
 
 const router = express.Router();
 
@@ -57,6 +59,47 @@ router.post(
   authController.loginValidation,
   validate,
   authController.login,
+);
+router.get(
+  "/auth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  }),
+);
+router.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: `${process.env.FRONTEND_URL}/auth/login?error=google_failed`,
+    session: false,
+  }),
+  async (req, res) => {
+    try {
+      const user = req.user;
+      const { accessToken, refreshToken } = await generateTokenPair(user);
+
+      // Store refresh token in database
+      await query(
+        `INSERT INTO refresh_tokens (user_id, token, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
+        [user.id, refreshToken],
+      );
+
+      // Redirect to frontend with tokens in URL params
+      // Frontend reads these and stores them in Zustand
+      const params = new URLSearchParams({
+        accessToken,
+        refreshToken,
+        userId: user.id,
+      });
+
+      res.redirect(
+        `${process.env.FRONTEND_URL}/auth/callback?${params.toString()}`,
+      );
+    } catch (error) {
+      res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=server_error`);
+    }
+  },
 );
 router.post("/auth/refresh", authController.refresh);
 router.post("/auth/logout", authController.logout);

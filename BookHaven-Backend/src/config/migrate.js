@@ -1,8 +1,8 @@
-require('dotenv').config();
-const { query } = require('./database');
+require("dotenv").config();
+const { query } = require("./database");
 
 const createTables = async () => {
-  console.log('🏗️  Running database migrations...');
+  console.log("🏗️  Running database migrations...");
 
   try {
     // Enable UUID extension
@@ -24,6 +24,13 @@ const createTables = async () => {
         created_at  TIMESTAMPTZ DEFAULT NOW(),
         updated_at  TIMESTAMPTZ DEFAULT NOW()
       )
+    `);
+
+    // Add google_id column if it doesn't exist
+    await query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS google_id VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'local'
     `);
 
     // ─── REFRESH TOKENS TABLE ────
@@ -135,13 +142,25 @@ const createTables = async () => {
     `);
 
     // ─── INDEXES ────
-    await query(`CREATE INDEX IF NOT EXISTS idx_books_search ON books USING gin(search_vector)`);
+    await query(
+      `CREATE INDEX IF NOT EXISTS idx_books_search ON books USING gin(search_vector)`,
+    );
     await query(`CREATE INDEX IF NOT EXISTS idx_books_author ON books(author)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_books_year ON books(published_year)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_shelves_user ON shelves(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_progress_user ON reading_progress(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_reviews_book ON reviews(book_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)`);
+    await query(
+      `CREATE INDEX IF NOT EXISTS idx_books_year ON books(published_year)`,
+    );
+    await query(
+      `CREATE INDEX IF NOT EXISTS idx_shelves_user ON shelves(user_id)`,
+    );
+    await query(
+      `CREATE INDEX IF NOT EXISTS idx_progress_user ON reading_progress(user_id)`,
+    );
+    await query(
+      `CREATE INDEX IF NOT EXISTS idx_reviews_book ON reviews(book_id)`,
+    );
+    await query(
+      `CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)`,
+    );
 
     // ─── TRIGGER: Auto-update search_vector on book insert/update ────
     await query(`
@@ -173,7 +192,13 @@ const createTables = async () => {
       $$ LANGUAGE plpgsql;
     `);
 
-    const tablesWithUpdatedAt = ['users', 'books', 'shelves', 'reading_progress', 'reviews'];
+    const tablesWithUpdatedAt = [
+      "users",
+      "books",
+      "shelves",
+      "reading_progress",
+      "reviews",
+    ];
     for (const table of tablesWithUpdatedAt) {
       await query(`DROP TRIGGER IF EXISTS ${table}_updated_at ON ${table}`);
       await query(`
@@ -183,10 +208,10 @@ const createTables = async () => {
       `);
     }
 
-    console.log('✅ All tables and triggers created successfully!');
+    console.log("✅ All tables and triggers created successfully!");
     process.exit(0);
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    console.error("❌ Migration failed:", error.message);
     process.exit(1);
   }
 };

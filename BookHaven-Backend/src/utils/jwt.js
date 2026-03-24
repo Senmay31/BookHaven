@@ -1,11 +1,12 @@
-const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
-const { query } = require('../config/database');
+const jwt = require("jsonwebtoken");
+const { v4: uuidv4 } = require("uuid");
+const { query } = require("../config/database");
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || "fallback_refresh_secret";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 
 // Generate an access token
 const generateAccessToken = (payload) => {
@@ -14,7 +15,9 @@ const generateAccessToken = (payload) => {
 
 // Generate a refresh token
 const generateRefreshToken = (payload) => {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN });
+  return jwt.sign(payload, JWT_REFRESH_SECRET, {
+    expiresIn: JWT_REFRESH_EXPIRES_IN,
+  });
 };
 
 // Verify the access token
@@ -34,7 +37,7 @@ const storeRefreshToken = async (userId, token) => {
 
   await query(
     `INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
-    [userId, token, expiresAt]
+    [userId, token, expiresAt],
   );
 };
 
@@ -42,7 +45,7 @@ const storeRefreshToken = async (userId, token) => {
 const validateStoredRefreshToken = async (token) => {
   const result = await query(
     `SELECT * FROM refresh_tokens WHERE token = $1 AND expires_at > NOW()`,
-    [token]
+    [token],
   );
   return result.rows[0] || null;
 };
@@ -59,7 +62,12 @@ const revokeAllUserTokens = async (userId) => {
 
 // Generate both tokens together
 const generateTokenPair = async (user) => {
-  const payload = { id: user.id, email: user.email, role: user.role };
+  const payload = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    jti: uuidv4(),
+  };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
   await storeRefreshToken(user.id, refreshToken);

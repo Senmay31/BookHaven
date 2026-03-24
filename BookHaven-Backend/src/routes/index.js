@@ -1,6 +1,8 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
-
+const { generateTokenPair } = require("../utils/jwt");
+const { query } = require("../config/database");
+const passport = require("../config/passport");
 const authController = require("../controllers/authController");
 const booksController = require("../controllers/booksController");
 const libraryController = require("../controllers/libraryController");
@@ -11,8 +13,6 @@ const {
 } = require("../middleware/auth");
 const { validate } = require("../middleware/errorHandler");
 const { upload } = require("../config/storage");
-const passport = require("../config/passport");
-const { generateTokenPair } = require("../utils/jwt");
 
 const router = express.Router();
 
@@ -76,14 +76,36 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
+      // console.log("🔍 Google callback - user received:", user ? "yes" : "no");
+      // console.log(
+      //   "🔍 User data:",
+      //   JSON.stringify({
+      //     id: user?.id,
+      //     email: user?.email,
+      //     role: user?.role,
+      //   }),
+      // );
+
+      // if (!user) {
+      //   console.error("❌ No user object from passport");
+      //   return res.redirect(
+      //     `${process.env.FRONTEND_URL}/auth/login?error=no_user`,
+      //   );
+      // }
+
+      // const { generateTokenPair } = require("../utils/jwt");
       const { accessToken, refreshToken } = await generateTokenPair(user);
 
       // Store refresh token in database
       await query(
         `INSERT INTO refresh_tokens (user_id, token, expires_at)
-         VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
+         VALUES ($1, $2, NOW() + INTERVAL '7 days')
+         ON CONFLICT (token) DO UPDATE
+         SET expires_at = NOW() + INTERVAL '7 days'`,
         [user.id, refreshToken],
       );
+
+      // console.log("🔍 Refresh token stored");
 
       // Redirect to frontend with tokens in URL params
       // Frontend reads these and stores them in Zustand
@@ -93,10 +115,17 @@ router.get(
         userId: user.id,
       });
 
+      // const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?${params.toString()}`;
+      // console.log("🔍 Redirecting to:", redirectUrl.substring(0, 60) + "...");
+
+      // res.redirect(redirectUrl);
+
       res.redirect(
         `${process.env.FRONTEND_URL}/auth/callback?${params.toString()}`,
       );
     } catch (error) {
+      // console.error("❌ Google callback error:", error.message);
+      // console.error("❌ Full error:", error);
       res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=server_error`);
     }
   },

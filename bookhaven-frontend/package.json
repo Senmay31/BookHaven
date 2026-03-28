@@ -24,7 +24,7 @@
     "react-dom": "^18",
     "react-hook-form": "^7.71.2",
     "react-hot-toast": "^2.6.0",
-    "react-pdf": "^10.4.0",
+    "react-pdf": "^10.4.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"
@@ -33,6 +33,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/react-pdf": "^5.0.7",
     "autoprefixer": "^10.0.1",
     "eslint": "^10.0.1",
     "eslint-config-next": "^0.2.4",

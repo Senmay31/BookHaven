@@ -28,7 +28,11 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import Button from "@/components/ui/Button";
 import { format } from "date-fns";
+import dynamic from "next/dynamic";
 
+const BookReader = dynamic(() => import("@/components/reader/BookReader"), {
+  ssr: false,
+});
 const StarSelector = ({
   value,
   onChange,
@@ -287,6 +291,9 @@ export default function BookDetailPage() {
       </div>
 
       {/* Inline reader */}
+      {showReader && (
+        <BookReader book={book} onClose={() => setShowReader(false)} />
+      )}
       {showReader && (
         <div className="mb-10">
           <div className="flex items-center justify-between mb-3">

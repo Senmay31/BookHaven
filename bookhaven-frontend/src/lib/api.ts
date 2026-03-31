@@ -135,8 +135,10 @@ export const shelfApi = {
 export const progressApi = {
   saveProgress: (data: {
     book_id: string;
-    position: number;
-    total_pages: number;
+    position?: number;
+    total_pages?: number;
+    progress_percentage?: number;
+    last_read_at?: string;
   }) => api.post("/progress", data),
   getProgress: (bookId: string) => api.get(`/progress/${bookId}`),
   getHistory: () => api.get("/progress/history"),

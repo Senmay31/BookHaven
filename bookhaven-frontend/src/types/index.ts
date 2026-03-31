@@ -31,6 +31,7 @@ export interface Book {
   pages?: number;
   file_type: "pdf" | "epub" | "mobi";
   file_size?: number;
+  file_url: string;
   cover_url: string | null;
   tags: string[];
   avg_rating: number;
@@ -72,6 +73,14 @@ export interface ReadingProgress {
   total_pages: number;
   percentage: number;
   last_read_at: string;
+}
+
+export interface SaveProgressInput {
+  book_id: string;
+  position?: number;
+  total_pages?: number;
+  progress_percentage?: number;
+  last_read_at?: string;
 }
 
 // ─── REVIEW ───

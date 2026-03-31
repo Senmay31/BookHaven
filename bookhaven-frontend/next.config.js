@@ -55,6 +55,12 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
   },
+  webpack: (config) => {
+    // Required for react-pdf
+    config.resolve.alias.canvas = false;
+    config.resolve.alias.encoding = false;
+    return config;
+  },
 };
 
 module.exports = nextConfig;

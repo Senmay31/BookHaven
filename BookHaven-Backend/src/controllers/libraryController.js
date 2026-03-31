@@ -84,23 +84,44 @@ exports.removeFromShelf = async (req, res, next) => {
 // Save/update reading progress
 exports.saveProgress = async (req, res, next) => {
   try {
-    const { book_id, position, total_pages } = req.body;
+    const {
+      book_id,
+      position,
+      total_pages,
+      progress_percentage,
+      last_read_at,
+    } = req.body;
 
+    // const progress_percentage =
+    //   total_pages > 0 ? Math.min(100, (position / total_pages) * 100) : 0;
+
+    // Calculate percentage from position/total_pages if percentage not provided
     const percentage =
-      total_pages > 0 ? Math.min(100, (position / total_pages) * 100) : 0;
+      progress_percentage !== undefined
+        ? progress_percentage
+        : position && total_pages
+          ? Math.round((position / total_pages) * 100)
+          : 0;
 
     const result = await query(
       `
-      INSERT INTO reading_progress (user_id, book_id, position, total_pages, percentage, last_read_at)
+      INSERT INTO reading_progress (user_id, book_id, position, total_pages, progress_percentage, last_read_at)
       VALUES ($1, $2, $3, $4, $5, NOW())
       ON CONFLICT (user_id, book_id) DO UPDATE SET
         position = $3,
         total_pages = $4,
-        percentage = $5,
+        progress_percentage = $5,
         last_read_at = NOW()
       RETURNING *
     `,
-      [req.user.id, book_id, position, total_pages, percentage.toFixed(2)],
+      [
+        req.user.id,
+        book_id,
+        position,
+        total_pages,
+        percentage.toFixed(2),
+        last_read_at || new Date(),
+      ],
     );
 
     // If book is completed (>95%), auto-update shelf status to 'completed'
@@ -125,7 +146,11 @@ exports.saveProgress = async (req, res, next) => {
       );
     }
 
-    res.json({ success: true, data: result.rows[0] });
+    res.json({
+      success: true,
+      message: "Progress saved!",
+      data: result.rows[0],
+    });
   } catch (error) {
     next(error);
   }

@@ -121,8 +121,10 @@ export const useSaveProgress = () => {
   return useMutation({
     mutationFn: (data: {
       book_id: string;
-      position: number;
-      total_pages: number;
+      position?: number;
+      total_pages?: number;
+      progress_percentage?: number;
+      last_read_at?: string;
     }) => progressApi.saveProgress(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
